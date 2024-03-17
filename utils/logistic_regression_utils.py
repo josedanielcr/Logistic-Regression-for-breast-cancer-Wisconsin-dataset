@@ -1,8 +1,13 @@
+import math
+
 import numpy as np
 
 
 def sigmoid(z):
-    return 1 / (1 + np.exp(-z))
+    # return 1 / (1 + np.exp(-z))
+    return np.where(z >= 0,
+                    1 / (1 + np.exp(-z)),
+                    np.exp(z) / (1 + np.exp(z)))
 
 
 def compute_cost(x, y, w, b):
@@ -24,7 +29,9 @@ def compute_cost(x, y, w, b):
     f_w_b = sigmoid(z)
 
     # loss for each model prediction
-    total_loss = -y * np.log(f_w_b) - (1 - y) * np.log(1 - f_w_b)
+    # total_loss = -y * np.log(f_w_b) - (1 - y) * np.log(1 - f_w_b)
+    epsilon = 1e-15
+    total_loss = -y * np.log(f_w_b + epsilon) - (1 - y) * np.log(1 - f_w_b + epsilon)
 
     # calculate the total cost
     return np.sum(total_loss) / m
@@ -71,10 +78,10 @@ def compute_gradient_descent(x, y, w, b, learning_rate, num_iterations):
     num_iterations gradient steps with learning rate alpha
 
     Args:
-        x :    (ndarray Shape (m, n) data, m examples by n features
-        y :    (ndarray Shape (m,))  target value
-        w : (ndarray Shape (n,))  Initial values of parameters of the model
-        b : (scalar)              Initial value of parameter of the model
+        x : (ndarray Shape (m,n)) features, mXn features
+        y : (ndarray Shape (m,))  target values
+        w : (ndarray Shape (n,))  weights of the model
+        b : (scalar)              bias parameter of the model
         learning_rate : (float)              Learning rate
         num_iterations : (int)            number of iterations to run gradient descent
 
@@ -86,3 +93,49 @@ def compute_gradient_descent(x, y, w, b, learning_rate, num_iterations):
     """
 
     m = len(x)
+
+    j_history = []
+
+    for i in range(num_iterations):
+
+        # calculate the gradient and update parameters
+        dj_dw, dj_db = compute_gradient(x, y, w, b)
+
+        # update parameters
+        w = w - learning_rate * dj_dw
+        b = b - learning_rate * dj_db
+
+        # print costs and update graphing variables
+        if i < 100000:
+            cost = compute_cost(x, y, w, b)
+            j_history.append(cost)
+
+        if i % math.ceil(num_iterations / 10) == 0 or i == (num_iterations - 1):
+            print(f"Iteration {i:4}: Cost {float(j_history[-1]):8.2f}   ")
+
+    return w, b
+
+
+def predict(x, w, b):
+    """
+    Predict whether the label is 0 or 1 using learned logistic
+    regression parameters w
+
+    Args:
+        x : (ndarray Shape (m,n)) features, mXn features
+        w : (ndarray Shape (n,))  weights of the model
+        b : (scalar)              bias parameter of the model
+
+    Returns:
+        p : (ndarray (m,)) The predictions for X using a threshold at 0.5
+    """
+
+    m, n = x.shape
+    p = np.zeros(m)
+
+    for i in range(m):
+        z_wb = np.dot(x[i], w) + b
+        f_wb = sigmoid(z_wb)
+        p[i] = 1 if f_wb >= 0.5 else 0
+
+    return p
